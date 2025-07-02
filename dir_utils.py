@@ -1,6 +1,5 @@
 import os
 import subprocess
-import time
 from concurrent.futures import ThreadPoolExecutor
 from tabulate import tabulate
 
@@ -21,25 +20,7 @@ def get_dir_size(dir_path):
         return int(output)
     else:
         return -1
-
-# Determines whether to calculate the dir size or not
-def should_skip(main_dir, full_path):
-    # If we are in "C:\" ignore anything that isn't a folder
-    if os.path.abspath(main_dir) == os.path.abspath("C:\\") and os.path.isdir(full_path) == False:
-        return True
     
-    # Ignore symlinks
-    if os.path.islink(full_path):
-        return True
-    
-    # Ignore files we cant access
-    try:
-        os.stat(full_path)
-    except (PermissionError, FileNotFoundError):
-        return True
-    
-    return False
-
 # Quicksort to sort subdirs by size
 def quick_sort(data):
     if len(data) <= 1:
@@ -59,6 +40,24 @@ def quick_sort(data):
             right.append(item)
     
     return quick_sort(left) + middle + quick_sort(right)
+
+# Determines whether to calculate the dir size or not
+def should_skip(main_dir, full_path):
+    # If we are in "C:\" ignore anything that isn't a folder
+    if os.path.abspath(main_dir) == os.path.abspath("C:\\") and os.path.isdir(full_path) == False:
+        return True
+    
+    # Ignore symlinks
+    if os.path.islink(full_path):
+        return True
+    
+    # Ignore files we cant access
+    try:
+        os.stat(full_path)
+    except (PermissionError, FileNotFoundError):
+        return True
+    
+    return False
 
 # Build a list of all subdirs and their sizes, takes in a dir
 def build_table(main_dir):
@@ -104,14 +103,3 @@ def build_table(main_dir):
     )
 
     return full_table
-
-def main():
-    user_input = input("Enter a system path: ")
-    
-    try:
-        print("\n" + build_table(user_input) + "\n")
-    except Exception:
-        print("Couldn't find that path.")
-
-if __name__ == "__main__":
-    main()
