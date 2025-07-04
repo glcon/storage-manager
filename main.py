@@ -1,12 +1,8 @@
-from dir_utils import build_table as bt
+from directories import build_table as bt
+from directories import get_drives
 
 def main():
-    user_input = input("Enter a system path: ")
-    
-    try:
-        print("\n" + bt(user_input) + "\n")
-    except Exception:
-        print("Couldn't find that path.")
+    print(f"\n {bt("C:\\Users")} \n")
 
 if __name__ == "__main__":
     main()
