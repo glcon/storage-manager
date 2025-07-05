@@ -20,11 +20,15 @@ def readable(size):
         size = size / 1000
         counter += 1
     
-    # Bytes don't need decimals
-    if counter == 0:
-        return f"{size} {suffixes[counter]}"
-    else:
-        return f"{size:.2f} {suffixes[counter]}"
+    # Take only 3 digits
+    size = str(size)
+    while len(size.replace(".", "")) > 3:
+        size = size[:-1]
+
+    if size[-1] == ".":
+        size = size[:-1]
+    
+    return f"{size} {suffixes[counter]}"
     
 # Split output into 2 rows
 def split_rows(rows):
