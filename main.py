@@ -1,8 +1,7 @@
-from directories import build_table as bt
-from directories import get_drives
+from display import navigate
 
 def main():
-    print(f"\n {bt("C:\\Users")} \n")
+    navigate("C:\\")
 
 if __name__ == "__main__":
     main()

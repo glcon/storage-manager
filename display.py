@@ -1,3 +1,10 @@
+from dir_utils import subdir_info
+from rich.table import Table
+from rich.console import Console
+from rich.box import ROUNDED
+from rich.align import Align
+
+
 # Convert to human readable format
 def readable(size):
     counter = 0
@@ -34,3 +41,30 @@ def split_rows(rows):
         combined_rows.append(left + right)
 
     return combined_rows
+
+def navigate(directory):
+    full_list = subdir_info(directory)
+
+    # Convert sizes to human readable
+    for x in range(len(full_list)):
+        full_list[x][1] = readable(full_list[x][1])
+
+    console = Console()
+    table = Table(show_header=False, box=ROUNDED)
+
+    # Split columns if too long
+    if len(full_list) > 20:
+        full_list = split_rows(full_list)
+
+        table.add_column("Folder Name", style="cyan")
+        table.add_column("Size", style="white")
+
+    table.add_column("Folder Name", style="cyan")
+    table.add_column("Size", style="white")
+
+    for row in full_list:
+        table.add_row(*row)
+
+    print("\n")
+    console.print(Align.center(table))
+    print("\n")

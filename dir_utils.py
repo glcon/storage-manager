@@ -1,9 +1,6 @@
 import string
-import sys
 import os
 import subprocess
-from tabulate import tabulate
-from display import split_rows, readable
 
 # Gets the size of a directory
 def get_dir_size(dir_path):
@@ -16,6 +13,8 @@ def get_dir_size(dir_path):
     # Remove blank characters
     output = process_variable.stdout.strip()
 
+    # add statement to detect char output AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    # will eventually replace the 0s with "error finding" or something
     return int(output)
 
 # Gets all drives
@@ -26,6 +25,7 @@ def get_drives():
         drive = f"{letter}:\\"
         if os.path.exists(drive):
             drives.append(drive)
+    
     return drives
 
 # Determines whether to calculate the dir size or not
@@ -47,7 +47,7 @@ def should_skip(main_dir, full_path):
     return False
 
 # Build a list of all subdirs and their sizes, takes in a dir
-def build_table(main_dir):
+def subdir_info(main_dir):
     full_subdir_paths = []
     subdir_names = []
 
@@ -85,21 +85,4 @@ def build_table(main_dir):
     names_and_sizes = sorted(names_and_sizes, key=lambda x: x[1])
     names_and_sizes.reverse()
 
-    for x in range(len(names_and_sizes)):
-        names_and_sizes[x][1] = readable(names_and_sizes[x][1])
-    
-    headers = ["Folder Name", "Size"]
-
-    # If list is too long, split it
-    if len(names_and_sizes) > 20:
-        names_and_sizes = split_rows(names_and_sizes)
-        headers = headers + headers
-
-    # Turn everything into a table
-    full_table = tabulate(
-        names_and_sizes, 
-        headers, 
-        tablefmt = "simple"
-    )
-
-    return full_table
+    return names_and_sizes
