@@ -1,4 +1,4 @@
-from dir_utils import subdir_info
+from dir_utils import subdir_info, get_drives
 from rich.table import Table
 from rich.console import Console
 from rich.box import ROUNDED
@@ -16,8 +16,8 @@ def readable(size):
         4: "TB"
     }
 
-    while size >= 1000:
-        size = size / 1000
+    while size >= 1024:
+        size = size / 1024
         counter += 1
     
     # Take only 3 digits
@@ -47,26 +47,39 @@ def split_rows(rows):
     return combined_rows
 
 def navigate(directory):
-    full_list = subdir_info(directory)
-
-    # Convert sizes to human readable
-    for x in range(len(full_list)):
-        full_list[x][1] = readable(full_list[x][1])
-
+    # Init console + table, create first columns
     console = Console()
-    table = Table(show_header=False, box=ROUNDED)
+    table = Table(show_header = False, box = ROUNDED)
 
-    # Split columns if too long
-    if len(full_list) > 20:
-        full_list = split_rows(full_list)
+    table.add_column("Folder Name", style = "cyan")
+    table.add_column("Size", style = "white")
+    
+    is_split = False
 
-        table.add_column("Folder Name", style="cyan")
-        table.add_column("Size", style="white")
+    # Determine if displaying drives or regular subdirs
+    if not directory:
+        display_list = get_drives()
+    else:
+        display_list = subdir_info(directory)
 
-    table.add_column("Folder Name", style="cyan")
-    table.add_column("Size", style="white")
+        # Split columns if too long
+        if len(display_list) > 20:
+            display_list = split_rows(display_list)
 
-    for row in full_list:
+            table.add_column("Folder Name", style = "cyan")
+            table.add_column("Size", style = "white")
+
+            is_split = True
+
+    # Convert byte sizes to human readable
+    for x in range(len(display_list)):
+        display_list[x][1] = readable(display_list[x][1])
+        
+        # If split, need to convert the 4th column's bytes too
+        if is_split:
+            display_list[x][3] = readable(display_list[x][3])
+
+    for row in display_list:
         table.add_row(*row)
 
     print("\n")

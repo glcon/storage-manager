@@ -1,6 +1,7 @@
 import string
 import os
 import subprocess
+import psutil
 
 # Gets the size of a directory
 def get_dir_size(dir_path):
@@ -23,9 +24,13 @@ def get_drives():
 
     for letter in string.ascii_uppercase:
         drive = f"{letter}:\\"
+
         if os.path.exists(drive):
-            drives.append(drive)
-    
+            # Get disk usage info
+            usage = psutil.disk_usage(drive)
+            size = usage.used
+            drives.append([drive, size])
+
     return drives
 
 # Determines whether to calculate the dir size or not
