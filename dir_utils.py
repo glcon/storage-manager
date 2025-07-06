@@ -55,8 +55,9 @@ def should_skip(main_dir, full_path):
 def subdir_info(main_dir):
     full_subdir_paths = []
     subdir_names = []
+    subdir_sizes = []
 
-    # Gather gather each full path and subdir name
+    # Gather gather each full path, subdir name, subdir size
     for directory in os.listdir(main_dir):
         # Create full path
         full_path = os.path.join(main_dir, directory)
@@ -66,8 +67,8 @@ def subdir_info(main_dir):
             continue
 
         # If folder name is too long, truncate it
-        if len(directory) >= 27:
-            cutoff = 24
+        if len(directory) >= 29:
+            cutoff = 26
 
             # Dont land on a space
             if directory[cutoff - 1] == " ":
@@ -76,18 +77,10 @@ def subdir_info(main_dir):
 
         full_subdir_paths.append(full_path)
         subdir_names.append(directory)
-
-    # Make a list of each dir name and size
-    subdir_sizes = []
-    for path in full_subdir_paths:
-        subdir_sizes.append(get_dir_size(path))
+        subdir_sizes.append(get_dir_size(full_path))
 
     names_and_sizes = []
     for name, size in zip(subdir_names, subdir_sizes):
         names_and_sizes.append([name, size])
-
-    # Sort + human readable format
-    names_and_sizes = sorted(names_and_sizes, key=lambda x: x[1])
-    names_and_sizes.reverse()
 
     return names_and_sizes

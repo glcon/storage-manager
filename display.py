@@ -3,7 +3,7 @@ from rich.table import Table
 from rich.console import Console
 from rich.box import ROUNDED
 from rich.align import Align
-
+import os
 
 # Convert to human readable format
 def readable(size):
@@ -51,33 +51,50 @@ def navigate(directory):
     console = Console()
     table = Table(show_header = False, box = ROUNDED)
 
-    table.add_column("Folder Name", style = "cyan")
+    table.add_column("Folder Name")
     table.add_column("Size", style = "white")
     
     is_split = False
 
-    # Determine if displaying drives or regular subdirs
+    # If no parameter passed, display drives, else display subdirs
     if not directory:
         display_list = get_drives()
     else:
+        # Create a single path string
+        directory = os.path.join(*directory)
+
         display_list = subdir_info(directory)
 
-        # Split columns if too long
-        if len(display_list) > 20:
-            display_list = split_rows(display_list)
+    # Sort
+    display_list = sorted(display_list, key=lambda x: x[1])
+    display_list.reverse()
 
-            table.add_column("Folder Name", style = "cyan")
-            table.add_column("Size", style = "white")
-
-            is_split = True
+    # Store the possible folders for the user to go to after navigating
+    # Needs to be done right after sort to maintain order
+    if not directory:
+        possible_selections = [drive_name for drive_name, _ in get_drives()]
+    else:
+        possible_selections = [subdir_name for subdir_name, _ in display_list]
 
     # Convert byte sizes to human readable
-    for x in range(len(display_list)):
-        display_list[x][1] = readable(display_list[x][1])
+    for index in range(len(display_list)):
+        display_list[index][1] = readable(display_list[index][1])
         
         # If split, need to convert the 4th column's bytes too
         if is_split:
-            display_list[x][3] = readable(display_list[x][3])
+            display_list[index][3] = readable(display_list[index][3])
+
+        # Add numbers, coloring for accessibility
+        display_list[index][0] = f"[dim]{index + 1})[/dim] [cyan]{display_list[index][0]}"
+
+    # Split columns if too long
+    if len(display_list) > 20:
+        display_list = split_rows(display_list)
+
+        table.add_column("Folder Name")
+        table.add_column("Size", style = "white")
+
+        is_split = True
 
     for row in display_list:
         table.add_row(*row)
@@ -85,3 +102,5 @@ def navigate(directory):
     print("\n")
     console.print(Align.center(table))
     print("\n")
+
+    return possible_selections
