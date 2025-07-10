@@ -4,7 +4,7 @@ import subprocess
 import psutil
 
 # Gets the size of a directory
-def get_dir_size(dir_path):
+def _get_dir_size(dir_path):
     process_variable = subprocess.run(
         ["dir_size.exe", dir_path],
         capture_output=True,
@@ -34,7 +34,7 @@ def get_drives():
     return drives
 
 # Determines whether to calculate the dir size or not
-def should_skip(main_dir, full_path):
+def _should_skip(main_dir, full_path):
     # If we are in "C:\" ignore anything that isn't a folder
     if os.path.abspath(main_dir) == os.path.abspath("C:\\") and os.path.isdir(full_path) == False:
         return True
@@ -63,7 +63,7 @@ def subdir_info(main_dir):
         full_path = os.path.join(main_dir, directory)
 
         # Check if we should skip
-        if should_skip(main_dir, full_path):
+        if _should_skip(main_dir, full_path):
             continue
 
         # If folder name is too long, truncate it
@@ -77,7 +77,7 @@ def subdir_info(main_dir):
 
         full_subdir_paths.append(full_path)
         subdir_names.append(directory)
-        subdir_sizes.append(get_dir_size(full_path))
+        subdir_sizes.append(_get_dir_size(full_path))
 
     names_and_sizes = []
     for name, size in zip(subdir_names, subdir_sizes):
