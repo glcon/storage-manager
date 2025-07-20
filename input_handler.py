@@ -3,30 +3,31 @@ import time
 from ui_spinner import stop_spinner
 from display import navigate
 
-def go_back(ui_state):
+def _go_back(ui_state):
     if not ui_state.current_path:
         print("Already at root.")
     else:
         ui_state.current_path.pop()
         navigate(ui_state)
 
-def handle_command_input(ui_state, user_input):
+def _handle_command_input(ui_state, user_input):
     def exit(ui_state):
         ui_state.should_exit = True
+        os.system("cls")
 
     def refresh(ui_state):
         navigate(ui_state)
 
     def help(_):
         os.system("cls")
-        print("\n")
-        print("/exit     - Exit the application")
-        print("/refresh  - Refresh the display")
-        print("/help     - Show this help message")
-        print("b         - Go back to previous folder")
-        print("[number]  - Open folder at that number")
+        print("/exit        Exit the application")
+        print("/refresh     Refresh the display")
+        print("/help        Show this help message")
+        print("b            Go back to previous folder")
+        print("[number]     Open folder at that number")
         print("\n")
         input("Hit any key to return. ")
+        navigate(ui_state)
 
     command_list = {
     "/exit": exit,
@@ -36,8 +37,10 @@ def handle_command_input(ui_state, user_input):
 
     if user_input in command_list:
         command_list[user_input](ui_state)
+    else:
+        print("Invalid command.")
 
-def handle_selection_input(ui_state, user_input):
+def _handle_selection_input(ui_state, user_input):
     index = int(user_input) - 1
 
     if 0 <= index < len(ui_state.selections):
@@ -62,15 +65,15 @@ def handle_input(ui_state, user_input):
         return
     
     if user_input.startswith("/"):
-        handle_command_input(ui_state, user_input)
+        _handle_command_input(ui_state, user_input)
         return
 
     if user_input.isdigit():
-        handle_selection_input(ui_state, user_input)
+        _handle_selection_input(ui_state, user_input)
         return
     
     if user_input == "b":
-        go_back()
+        _go_back(ui_state)
         return
     
     else:

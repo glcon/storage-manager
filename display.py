@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.box import ROUNDED
 from rich.align import Align
 import os
+import shutil
 from ui_spinner import start_spinner, stop_spinner
 
 # Converts bytes to human readable format
@@ -48,7 +49,7 @@ def navigate(ui_state):
     table.add_column("Folder Name")
     table.add_column("Size", style = "white", justify = "right")
 
-    # Empty -> show drives, else show subdirs
+    # current_path empty -> show drives, else show subdirs
     if not ui_state.current_path:
         display_list = get_drives()
     else:
@@ -63,7 +64,6 @@ def navigate(ui_state):
         ui_state.selections = [drive_name for drive_name, _ in display_list]
     else:
         ui_state.selections = [subdir_name for subdir_name, _ in display_list]
-
 
     for index, item in enumerate(display_list):
         item[1] = _convert_to_readable(item[1])
@@ -83,6 +83,11 @@ def navigate(ui_state):
 
     stop_spinner()
 
+    terminal_width = shutil.get_terminal_size().columns
+    message = "type \"/help\" for help"
+    
+    print("\n")
+    print(message.center(terminal_width))
     print("\n")
     console.print(Align.center(table))
     print("\n")
