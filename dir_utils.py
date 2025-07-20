@@ -52,7 +52,7 @@ def _should_skip(main_dir, full_path):
     return False
 
 # Build a list of all subdirs and their sizes, takes in a dir
-def subdir_info(main_dir):
+def subdirs_and_sizes(main_dir):
     full_subdir_paths = []
     subdir_names = []
     subdir_sizes = []

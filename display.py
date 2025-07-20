@@ -1,39 +1,27 @@
-from dir_utils import subdir_info, get_drives
+from dir_utils import subdirs_and_sizes, get_drives
 from rich.table import Table
 from rich.console import Console
 from rich.box import ROUNDED
 from rich.align import Align
 import os
-from spinner import start_spinner, stop_spinner
+from ui_spinner import start_spinner, stop_spinner
 
-# Convert to human readable format
-def _readable(size):
-    # Tell user "could not calculate"
+# Converts bytes to human readable format
+def _convert_to_readable(size):
+    # Could not calculate
     if size == 0:
         return "CNC"
 
     counter = 0
-    suffixes = {
-        0: "Bytes", 
-        1: "KiB",
-        2: "MiB",
-        3: "GiB",
-        4: "TiB"
-    }
+    suffixes = ["Bytes", "KiB", "MiB", "GiB", "TiB", "PiB"]
 
-    while size >= 1024:
+    for suffix in suffixes:
+        if size < 1024:
+            break
+        
         size = size / 1024
-        counter += 1
     
-    # Take only 3 digits
-    size = str(size)
-    while len(size.replace(".", "")) > 3:
-        size = size[:-1]
-
-    if size[-1] == ".":
-        size = size[:-1]
-    
-    return f"{size} {suffixes[counter]}"
+    return f"{size:.3g} {suffix}"
     
 # Split output into 2 rows
 def _split_rows(rows):
@@ -51,8 +39,7 @@ def _split_rows(rows):
 
     return combined_rows
 
-def navigate(directory):
-    os.system("cls")
+def navigate(ui_state):
     start_spinner()
 
     # Init console + table, create first columns
@@ -61,37 +48,27 @@ def navigate(directory):
 
     table.add_column("Folder Name")
     table.add_column("Size", style = "white", justify = "right")
-    
-    is_split = False
 
-    # If list empty -> display drives
-    if not directory:
+    # Empty -> show drives, else show subdirs
+    if not ui_state.current_path:
         display_list = get_drives()
     else:
-        # Create a single path string from the passed list
-        directory = os.path.join(*directory)
-
-        display_list = subdir_info(directory)
+        directory = os.path.join(*ui_state.current_path)
+        display_list = subdirs_and_sizes(directory)
 
     display_list = sorted(display_list, key=lambda x: x[1])
     display_list.reverse()
 
-    # Store the possible folders for the user to go to after navigating
-    # Needs to be done right after sort to maintain order
-    if not directory:
-        possible_selections = [drive_name for drive_name, _ in display_list]
+    # Update choices to reflect ui
+    if not ui_state.current_path:
+        ui_state.selections = [drive_name for drive_name, _ in display_list]
     else:
-        possible_selections = [subdir_name for subdir_name, _ in display_list]
+        ui_state.selections = [subdir_name for subdir_name, _ in display_list]
 
-    # Convert byte sizes to human readable
     for index in range(len(display_list)):
-        display_list[index][1] = _readable(display_list[index][1])
-        
-        # If split, need to convert the 4th column's bytes too
-        if is_split:
-            display_list[index][3] = _readable(display_list[index][3])
+        display_list[index][1] = _convert_to_readable(display_list[index][1])
 
-        # Add numbers + coloring for accessibility
+        # Numbers + coloring for accessibility
         display_list[index][0] = f"[dim]{index + 1})[/dim] [cyan]{display_list[index][0]}"
 
     # Split columns if too long
@@ -107,10 +84,7 @@ def navigate(directory):
         table.add_row(*row)
 
     stop_spinner()
-    os.system("cls")
 
     print("\n")
     console.print(Align.center(table))
     print("\n")
-
-    return possible_selections

@@ -3,12 +3,13 @@ import threading
 import sys
 import time
 import shutil
+import os
 
 _spinner_stop_event = None
 _spinner_thread = None
 
 def _spinner_function(stop_event):
-    spinner_cycle = itertools.cycle(['|', '/', '-', '\\'])
+    spinner_cycle = itertools.cycle(['|', '/', '—', '\\'])
     width = shutil.get_terminal_size().columns
 
     # Hide cursor
@@ -34,6 +35,8 @@ def _spinner_function(stop_event):
     sys.stdout.flush()
 
 def start_spinner():
+    os.system("cls")
+    
     global _spinner_stop_event, _spinner_thread
 
     if _spinner_thread and _spinner_thread.is_alive():
@@ -51,3 +54,5 @@ def stop_spinner():
         
     if _spinner_thread:
         _spinner_thread.join()
+
+    os.system("cls")
