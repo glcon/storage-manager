@@ -23,14 +23,14 @@ def _convert_to_readable(size):
     
     return f"{size:.3g} {suffix}"
     
-# Split output into 2 rows
+# Turn a 2 column list into a 4 column one
 def _split_rows(rows):
-    half = (len(rows) + 1) // 2  # Round up
+    half = (len(rows) + 1) // 2
     left_rows = rows[:half]
     right_rows = rows[half:]
 
-    # If right row is shorter, pad with empty rows
-    while len(right_rows) < len(left_rows):
+    # If right row is shorter, add an empty row
+    if len(right_rows) < len(left_rows):
         right_rows.append(["", ""])
 
     combined_rows = []
@@ -42,7 +42,6 @@ def _split_rows(rows):
 def navigate(ui_state):
     start_spinner()
 
-    # Init console + table, create first columns
     console = Console()
     table = Table(show_header = False, box = ROUNDED)
 
@@ -59,26 +58,25 @@ def navigate(ui_state):
     display_list = sorted(display_list, key=lambda x: x[1])
     display_list.reverse()
 
-    # Update choices to reflect ui
+    # Update state to reflect current ui
     if not ui_state.current_path:
         ui_state.selections = [drive_name for drive_name, _ in display_list]
     else:
         ui_state.selections = [subdir_name for subdir_name, _ in display_list]
 
-    for index in range(len(display_list)):
-        display_list[index][1] = _convert_to_readable(display_list[index][1])
+
+    for index, item in enumerate(display_list):
+        item[1] = _convert_to_readable(item[1])
 
         # Numbers + coloring for accessibility
-        display_list[index][0] = f"[dim]{index + 1})[/dim] [cyan]{display_list[index][0]}"
+        item[0] = f"[dim]{index + 1})[/dim] [cyan]{item[0]}"
 
-    # Split columns if too long
+    # Split columns if list is long
     if len(display_list) > 20:
         display_list = _split_rows(display_list)
 
         table.add_column("Folder Name")
         table.add_column("Size", style = "white", justify = "right")
-
-        is_split = True
 
     for row in display_list:
         table.add_row(*row)
