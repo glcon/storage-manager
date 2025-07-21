@@ -4,21 +4,21 @@ import subprocess
 import psutil
 
 # Gets the size of a directory
-def _get_dir_size(dir_path):
+def _get_dir_size(ui_state, dir_path):
     process_variable = subprocess.run(
         ["dir_size.exe", dir_path],
         capture_output=True,
         text=True
     )
 
-    # Remove blank characters
-    output = process_variable.stdout.strip()
+    output = int(process_variable.stdout.strip())
 
-    # add statement to detect char output AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-    # will eventually replace the 0s with "error finding" or something
-    return int(output)
+    if ui_state.show_cnc == False and output == 0:
+        return
 
-# Gets all drives
+    return output
+
+# Returns a list of all drives and their sizes
 def get_drives():
     drives = []
 
@@ -52,17 +52,14 @@ def _should_skip(main_dir, full_path):
     return False
 
 # Build a list of all subdirs and their sizes, takes in a dir
-def subdirs_and_sizes(main_dir):
-    full_subdir_paths = []
+def subdirs_and_sizes(ui_state, main_dir):
     subdir_names = []
     subdir_sizes = []
 
     # Gather gather each full path, subdir name, subdir size
     for directory in os.listdir(main_dir):
-        # Create full path
         full_path = os.path.join(main_dir, directory)
 
-        # Check if we should skip
         if _should_skip(main_dir, full_path):
             continue
 
@@ -73,11 +70,16 @@ def subdirs_and_sizes(main_dir):
             # Dont land on a space
             if directory[cutoff - 1] == " ":
                 cutoff -= 2
+            
             directory = directory[:cutoff] + "..."
+        
+        current_directory_size = _get_dir_size(ui_state, full_path)
+        
+        if current_directory_size == None:
+            continue
 
-        full_subdir_paths.append(full_path)
         subdir_names.append(directory)
-        subdir_sizes.append(_get_dir_size(full_path))
+        subdir_sizes.append(current_directory_size)
 
     names_and_sizes = []
     for name, size in zip(subdir_names, subdir_sizes):

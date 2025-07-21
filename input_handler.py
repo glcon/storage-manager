@@ -1,4 +1,4 @@
-import os
+import commands
 import time
 from ui_spinner import stop_spinner
 from display import navigate
@@ -11,32 +11,9 @@ def _go_back(ui_state):
         navigate(ui_state)
 
 def _handle_command_input(ui_state, user_input):
-    def exit(ui_state):
-        ui_state.should_exit = True
-        os.system("cls")
-
-    def refresh(ui_state):
-        navigate(ui_state)
-
-    def help(_):
-        os.system("cls")
-        print("/exit        Exit the application")
-        print("/refresh     Refresh the display")
-        print("/help        Show this help message")
-        print("b            Go back to previous folder")
-        print("[number]     Open folder at that number")
-        print("\n")
-        input("Hit any key to return. ")
-        navigate(ui_state)
-
-    command_list = {
-    "/exit": exit,
-    "/refresh": refresh,
-    "/help": help
-    }
-
-    if user_input in command_list:
-        command_list[user_input](ui_state)
+    if user_input in commands.command_list:
+        # Function call
+        commands.command_list[user_input](ui_state)
     else:
         print("Invalid command.")
 

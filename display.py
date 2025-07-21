@@ -54,7 +54,7 @@ def navigate(ui_state):
         display_list = get_drives()
     else:
         directory = os.path.join(*ui_state.current_path)
-        display_list = subdirs_and_sizes(directory)
+        display_list = subdirs_and_sizes(ui_state, directory)
 
     display_list = sorted(display_list, key=lambda x: x[1])
     display_list.reverse()
