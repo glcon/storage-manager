@@ -20,4 +20,6 @@ calculated. You can hide these with the "togglecnc" command.
 
 Most core system folders are inaccessible even with admin permissions.
 In addition to this, they tend to contain ridiculous amounts of subfolders and 
-lead to large calculation times, so I advise against using the program on them.'''
+lead to large calculation times, so I advise against using the program on them.
+
+Use "togglewelcome" to hide this message.'''

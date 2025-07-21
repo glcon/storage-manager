@@ -18,11 +18,13 @@ def _handle_selection_input(ui_state, user_input):
         selected_folder = ui_state.selections[index]
         new_path = os.path.join(*ui_state.current_path, selected_folder)
 
+        # Check for access
         if not os.access(new_path, os.R_OK | os.X_OK):
             print("Can't access that folder. Permission denied.")
             time.sleep(5)
             return
 
+        # Try to go there
         try:
             ui_state.current_path.append(selected_folder)
             display_table(ui_state)

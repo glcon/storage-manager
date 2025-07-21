@@ -1,7 +1,6 @@
 from display import display_table, welcome_message
 from input_handler import handle_input
 from state import AppState
-import os
 
 def main():
     welcome_message()

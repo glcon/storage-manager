@@ -9,17 +9,19 @@ import shutil
 import os
 
 def welcome_message():
-    if os.path.exists("show_welcome.txt"):
-        with open("show_welcome.txt", "r") as f:
+    show_welcome_path = r"src\stman\show_welcome.txt"
+
+    if os.path.exists(show_welcome_path):
+        with open(show_welcome_path, "r") as f:
             if f.read().strip().lower() == "no":
                 return  # Don't show message
     
-        os.system("cls")
+    os.system("cls")
 
-        print(messages.welcome_text)
+    print(messages.welcome_text)
 
-        print("\n")
-        input("Hit any key to continue. ")
+    print()
+    input("Hit any key to continue. ")
 
 # Prints layer and folder name above a table
 def _print_header(ui_state):
@@ -36,7 +38,7 @@ def _print_header(ui_state):
     print(info_message.center(width))
 
 # Converts bytes to human readable format
-def _convert_to_readable(size):
+def _convert_to_readable(size) -> str:
     # Could not calculate
     if size == 0:
         return "CNC"
@@ -53,7 +55,7 @@ def _convert_to_readable(size):
     return f"{size:.3g} {suffix}"
     
 # Turn a 2 column list into a 4 column one
-def _split_rows(rows):
+def _split_rows(rows) -> list:
     half = (len(rows) + 1) // 2
     left_rows = rows[:half]
     right_rows = rows[half:]
@@ -68,6 +70,7 @@ def _split_rows(rows):
 
     return combined_rows
 
+# Displays a table of each directory and its size, main ui function
 def display_table(ui_state):
     start_spinner()
 

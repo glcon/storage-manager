@@ -24,8 +24,11 @@ def goto(ui_state):
         return
 
 def top(ui_state):
-    ui_state.current_path = []
-    display_table(ui_state)
+    if not ui_state.current_path:
+        print("Already at root.")
+    else:
+        ui_state.current_path = []
+        display_table(ui_state)
 
 def go_back(ui_state):
     if not ui_state.current_path:
@@ -55,13 +58,13 @@ def toggle_cnc(ui_state):
         print("Showing uncalculatable folders.")
 
 def toggle_welcome(_):
-    filename = "show_welcome.txt"
+    show_welcome_path = r"src\stman\show_welcome.txt"
 
-    if not os.path.exists(filename):
-        print(f"\"{filename}\" does not exist. Can't toggle.")
+    if not os.path.exists(show_welcome_path):
+        print(f"\"{show_welcome_path}\" does not exist. Can't toggle.")
         return
 
-    with open(filename, "r") as f:
+    with open(show_welcome_path, "r") as f:
         current_value = f.read().strip().lower()
 
     if current_value == "yes":
@@ -70,7 +73,7 @@ def toggle_welcome(_):
     if current_value == "no":
         new_value = "yes"
 
-    with open(filename, "w") as f:
+    with open(show_welcome_path, "w") as f:
         f.write(new_value)
 
     if new_value == "no":

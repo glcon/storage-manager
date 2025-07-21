@@ -4,9 +4,9 @@ import subprocess
 import psutil
 
 # Gets the size of a directory
-def _get_dir_size(ui_state, dir_path):
+def _get_dir_size(ui_state, dir_path) -> int:
     process_variable = subprocess.run(
-        ["dir_size.exe", dir_path],
+        [r'dir_size\dir_size.exe', dir_path],
         capture_output=True,
         text=True
     )
@@ -19,7 +19,7 @@ def _get_dir_size(ui_state, dir_path):
     return output
 
 # Returns a list of all drives and their sizes
-def get_drives():
+def get_drives() -> list:
     drives = []
 
     for letter in string.ascii_uppercase:
@@ -34,7 +34,7 @@ def get_drives():
     return drives
 
 # Determines if file's size should be calculated
-def _should_calculate(ui_state, full_path):
+def _should_calculate(ui_state, full_path) -> bool:
     # Ignore non-folders when inside any drive
     if len(ui_state.current_path) == 1:
         if not os.path.isdir(full_path):
@@ -52,7 +52,7 @@ def _should_calculate(ui_state, full_path):
     return True
 
 # Build a list of all subdirs and their sizes, takes in a dir
-def subdirs_and_sizes(ui_state, main_dir):
+def subdirs_and_sizes(ui_state, main_dir) -> list:
     subdir_names = []
     subdir_sizes = []
 
@@ -85,4 +85,5 @@ def subdirs_and_sizes(ui_state, main_dir):
     for name, size in zip(subdir_names, subdir_sizes):
         names_and_sizes.append([name, size])
 
+    # Will be a list of lists
     return names_and_sizes
