@@ -3,9 +3,10 @@ from rich.table import Table
 from rich.console import Console
 from rich.box import ROUNDED
 from rich.align import Align
-import os
-import shutil
+import messages
 from ui_spinner import start_spinner, stop_spinner
+import shutil
+import os
 
 def welcome_message():
     if os.path.exists("show_welcome.txt"):
@@ -13,13 +14,26 @@ def welcome_message():
             if f.read().strip().lower() == "no":
                 return  # Don't show message
     
-    os.system("cls")
-    print("Thanks for downloading my storage manager.")
-    print("Type \"help\" for help at any time")
-    print("\n")
-    print("To hide this startup message, use the \"hidewelcome\" command.")
-    print("\n")
-    input("Hit any key to continue. ")
+        os.system("cls")
+
+        print(messages.welcome_text)
+
+        print("\n")
+        input("Hit any key to continue. ")
+
+# Prints layer and folder name above a table
+def _print_header(ui_state):
+    layer_number = len(ui_state.current_path)
+    
+    if not ui_state.current_path:
+        current_folder_name = "Root"
+    else:
+        current_folder_name = ui_state.current_path[-1]
+
+    width = shutil.get_terminal_size().columns
+    info_message = f"Current Folder: {current_folder_name}        Layer: {layer_number}"
+
+    print(info_message.center(width))
 
 # Converts bytes to human readable format
 def _convert_to_readable(size):
@@ -97,6 +111,8 @@ def display_table(ui_state):
 
     stop_spinner()
 
+    print("\n")
+    _print_header(ui_state)
     print("\n")
     console.print(Align.center(table))
     print("\n")

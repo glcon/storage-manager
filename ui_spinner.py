@@ -9,7 +9,7 @@ _spinner_stop_event = None
 _spinner_thread = None
 
 def _spinner_function(stop_event):
-    spinner_cycle = itertools.cycle(['|', '/', '—', '\\'])
+    spinner_cycle = itertools.cycle(['|', '/', '-', '\\'])
     width = shutil.get_terminal_size().columns
 
     # Hide cursor

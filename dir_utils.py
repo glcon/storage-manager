@@ -33,35 +33,36 @@ def get_drives():
 
     return drives
 
-# Determines whether to calculate the dir size or not
-def _should_skip(main_dir, full_path):
-    # If we are in "C:\" ignore anything that isn't a folder
-    if os.path.abspath(main_dir) == os.path.abspath("C:\\") and os.path.isdir(full_path) == False:
-        return True
+# Determines if file's size should be calculated
+def _should_calculate(ui_state, full_path):
+    # Ignore non-folders when inside any drive
+    if len(ui_state.current_path) == 1:
+        if not os.path.isdir(full_path):
+            return False
     
-    # Ignore symlinks
     if os.path.islink(full_path):
-        return True
+        return False
     
-    # Ignore files we cant access
+    # Inaccessible
     try:
         os.stat(full_path)
-    except (PermissionError, FileNotFoundError):
-        return True
+    except (PermissionError, FileNotFoundError, OSError):
+        return False
     
-    return False
+    return True
 
 # Build a list of all subdirs and their sizes, takes in a dir
 def subdirs_and_sizes(ui_state, main_dir):
     subdir_names = []
     subdir_sizes = []
 
-    # Gather gather each full path, subdir name, subdir size
     for directory in os.listdir(main_dir):
         full_path = os.path.join(main_dir, directory)
 
-        if _should_skip(main_dir, full_path):
+        if not _should_calculate(ui_state, full_path):
             continue
+
+        current_directory_size = _get_dir_size(ui_state, full_path)
 
         # If folder name is too long, truncate it
         if len(directory) >= 29:
@@ -73,8 +74,7 @@ def subdirs_and_sizes(ui_state, main_dir):
             
             directory = directory[:cutoff] + "..."
         
-        current_directory_size = _get_dir_size(ui_state, full_path)
-        
+        # Dont add
         if current_directory_size == None:
             continue
 
