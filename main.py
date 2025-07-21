@@ -1,10 +1,13 @@
-from display import navigate
+from display import display_table, welcome_message
 from input_handler import handle_input
 from state import AppState
+import os
 
-def main():    
+def main():
+    welcome_message()
+
     ui_state = AppState()
-    navigate(ui_state)
+    display_table(ui_state)
 
     while not ui_state.should_exit:
         user_input = input(">>> ").strip().lower()

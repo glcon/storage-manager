@@ -7,6 +7,20 @@ import os
 import shutil
 from ui_spinner import start_spinner, stop_spinner
 
+def welcome_message():
+    if os.path.exists("show_welcome.txt"):
+        with open("show_welcome.txt", "r") as f:
+            if f.read().strip().lower() == "no":
+                return  # Don't show message
+    
+    os.system("cls")
+    print("Thanks for downloading my storage manager.")
+    print("Type \"help\" for help at any time")
+    print("\n")
+    print("To hide this startup message, use the \"hidewelcome\" command.")
+    print("\n")
+    input("Hit any key to continue. ")
+
 # Converts bytes to human readable format
 def _convert_to_readable(size):
     # Could not calculate
@@ -40,7 +54,7 @@ def _split_rows(rows):
 
     return combined_rows
 
-def navigate(ui_state):
+def display_table(ui_state):
     start_spinner()
 
     console = Console()
@@ -83,11 +97,6 @@ def navigate(ui_state):
 
     stop_spinner()
 
-    terminal_width = shutil.get_terminal_size().columns
-    message = "type \"/help\" for help"
-    
-    print("\n")
-    print(message.center(terminal_width))
     print("\n")
     console.print(Align.center(table))
     print("\n")
