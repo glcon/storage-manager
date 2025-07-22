@@ -2,4 +2,4 @@
 *.exe
 __pycache__/
 venv/
-todo.txt
+todo

@@ -1,17 +1,17 @@
 import string
 import os
-import subprocess
+import ctypes
 import psutil
+from ctypes import wintypes
+
+# Load the DLL
+dir_size_dll = ctypes.WinDLL(r'dir_size\\dir_size.dll')
+dir_size_dll.get_directory_size.argtypes = [wintypes.LPCWSTR]
+dir_size_dll.get_directory_size.restype = ctypes.c_longlong
 
 # Gets the size of a directory
-def _get_dir_size(ui_state, dir_path) -> int:
-    process_variable = subprocess.run(
-        [r'dir_size\dir_size.exe', dir_path],
-        capture_output=True,
-        text=True
-    )
-
-    output = int(process_variable.stdout.strip())
+def _get_dir_size(ui_state, dir_path):
+    output = dir_size_dll.get_directory_size(dir_path)
 
     if ui_state.show_cnc == False and output == 0:
         return

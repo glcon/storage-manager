@@ -7,6 +7,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <exception>
 
 class DirectoryQueue {
     std::queue<std::wstring> dirs;
@@ -23,6 +24,7 @@ public:
         cv.notify_one();
     }
 
+    // Pop with wait, returns false if finished and queue empty
     bool pop(std::wstring& dir) {
         std::unique_lock<std::mutex> lock(mtx);
         cv.wait(lock, [this] { return !dirs.empty() || finished; });
@@ -48,77 +50,121 @@ public:
 
 std::atomic<long long> total_size(0);
 
-void scan_directory(DirectoryQueue& queue) {
-    std::wstring dir_path;
-    while (queue.pop(dir_path)) {
-        WIN32_FIND_DATAW find_data;
-        std::wstring search_path = dir_path + L"\\*";
+// Track how many directories are still pending to process
+class TaskCounter {
+    std::atomic<int> count;
+    std::mutex mtx;
+    std::condition_variable cv;
 
-        HANDLE hFind = FindFirstFileExW(
-            search_path.c_str(),
-            FindExInfoBasic,
-            &find_data,
-            FindExSearchNameMatch,
-            NULL,
-            FIND_FIRST_EX_LARGE_FETCH
-        );
+public:
+    TaskCounter(int initial) : count(initial) {}
 
-        if (hFind == INVALID_HANDLE_VALUE) {
-            continue;
+    void increment() {
+        count.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    void decrement() {
+        int old = count.fetch_sub(1, std::memory_order_acq_rel);
+        if (old == 1) {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.notify_all();
         }
+    }
 
-        do {
-            const std::wstring name = find_data.cFileName;
-            if (name == L"." || name == L"..")
+    void wait_for_zero() {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [this] { return count.load(std::memory_order_acquire) == 0; });
+    }
+};
+
+void scan_directory(DirectoryQueue& queue, TaskCounter& tasks) {
+    try {
+        std::wstring dir_path;
+        while (queue.pop(dir_path)) {
+            WIN32_FIND_DATAW find_data;
+            std::wstring search_path = dir_path + L"\\*";
+
+            HANDLE hFind = FindFirstFileExW(
+                search_path.c_str(),
+                FindExInfoBasic,
+                &find_data,
+                FindExSearchNameMatch,
+                NULL,
+                FIND_FIRST_EX_LARGE_FETCH
+            );
+
+            if (hFind == INVALID_HANDLE_VALUE) {
+                // No files found or error, just decrement and continue
+                tasks.decrement();
                 continue;
-
-            if (find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-                continue; // skip symlinks/junctions
             }
 
-            if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                std::wstring subdir = dir_path + L"\\" + name;
-                queue.push(subdir);
-            } else {
-                LARGE_INTEGER filesize;
-                filesize.HighPart = find_data.nFileSizeHigh;
-                filesize.LowPart = find_data.nFileSizeLow;
-                total_size += filesize.QuadPart;
-            }
-        } while (FindNextFileW(hFind, &find_data));
+            do {
+                const std::wstring name = find_data.cFileName;
+                if (name == L"." || name == L"..")
+                    continue;
 
-        FindClose(hFind);
+                if (find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+                    continue; // skip symlinks/junctions
+                }
+
+                if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                    // New directory found, add it to queue and increment tasks
+                    tasks.increment();
+                    queue.push(dir_path + L"\\" + name);
+                } else {
+                    LARGE_INTEGER filesize;
+                    filesize.HighPart = find_data.nFileSizeHigh;
+                    filesize.LowPart = find_data.nFileSizeLow;
+                    total_size += filesize.QuadPart;
+                }
+            } while (FindNextFileW(hFind, &find_data));
+
+            FindClose(hFind);
+
+            // Finished processing current directory
+            tasks.decrement();
+        }
+    }
+    catch (const std::exception& e) {
+        // Optional: log error here
+        tasks.decrement();
+    }
+    catch (...) {
+        // Catch all
+        tasks.decrement();
     }
 }
 
-int wmain(int argc, wchar_t* argv[]) {
-    if (argc != 2) {
-        std::wcerr << L"Usage: size.exe <directory_path>\n";
-        return 1;
-    }
+extern "C" __declspec(dllexport)
+long long get_directory_size(const wchar_t* path) {
+    total_size = 0;
 
     DirectoryQueue queue;
-    queue.push(argv[1]);
+    queue.push(path);
 
-    const unsigned int num_threads = std::thread::hardware_concurrency();
+    // Initialize task counter with 1 (the initial directory)
+    TaskCounter tasks(1);
+
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    if (num_threads == 0) num_threads = 4;
+
     std::vector<std::thread> workers;
-
     for (unsigned int i = 0; i < num_threads; ++i) {
-        workers.emplace_back(scan_directory, std::ref(queue));
+        workers.emplace_back(scan_directory, std::ref(queue), std::ref(tasks));
     }
 
-    while (true) {
-        if (queue.is_empty()) {
-            queue.set_finished();
-            break;
-        }
-        Sleep(100);
-    }
+    // Wait until all directories processed
+    tasks.wait_for_zero();
+
+    // Signal the queue that no more directories will be added
+    queue.set_finished();
 
     for (auto& t : workers) {
-        t.join();
+        if (t.joinable()) {
+            t.join();
+        }
     }
 
-    std::wcout << total_size.load() << std::endl;
-    return 0;
+    return total_size.load();
 }
