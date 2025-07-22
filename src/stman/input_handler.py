@@ -21,7 +21,6 @@ def _handle_selection_input(ui_state, user_input):
         # Check for access
         if not os.access(new_path, os.R_OK | os.X_OK):
             print("Can't access that folder. Permission denied.")
-            time.sleep(5)
             return
 
         # Try to go there

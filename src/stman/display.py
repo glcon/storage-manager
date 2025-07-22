@@ -116,6 +116,6 @@ def display_table(ui_state):
 
     print("\n")
     _print_header(ui_state)
-    print("\n")
+    print()
     console.print(Align.center(table))
     print("\n")
