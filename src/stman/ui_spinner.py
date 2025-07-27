@@ -10,7 +10,10 @@ _spinner_thread = None
 
 def _spinner_function(stop_event):
     spinner_cycle = itertools.cycle(['|', '/', '-', '\\'])
-    width = shutil.get_terminal_size().columns
+    try:
+        width = shutil.get_terminal_size().columns
+    except OSError:
+        width = 80  # Default width if terminal size can't be determined
 
     # Hide cursor
     sys.stdout.write('\033[?25l')
@@ -52,7 +55,7 @@ def stop_spinner():
     if _spinner_stop_event:
         _spinner_stop_event.set()
         
-    if _spinner_thread:
-        _spinner_thread.join()
+    if _spinner_thread and _spinner_thread.is_alive():
+        _spinner_thread.join(timeout=1.0)  # Timeout to prevent hanging
 
     os.system("cls")

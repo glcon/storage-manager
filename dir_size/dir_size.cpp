@@ -24,7 +24,6 @@ public:
         cv.notify_one();
     }
 
-    // Pop with wait, returns false if finished and queue empty
     bool pop(std::wstring& dir) {
         std::unique_lock<std::mutex> lock(mtx);
         cv.wait(lock, [this] { return !dirs.empty() || finished; });
@@ -49,8 +48,8 @@ public:
 };
 
 std::atomic<long long> total_size(0);
+std::atomic<bool> had_error(false);  // Track access errors
 
-// Track how many directories are still pending to process
 class TaskCounter {
     std::atomic<int> count;
     std::mutex mtx;
@@ -94,7 +93,7 @@ void scan_directory(DirectoryQueue& queue, TaskCounter& tasks) {
             );
 
             if (hFind == INVALID_HANDLE_VALUE) {
-                // No files found or error, just decrement and continue
+                had_error = true;
                 tasks.decrement();
                 continue;
             }
@@ -104,12 +103,10 @@ void scan_directory(DirectoryQueue& queue, TaskCounter& tasks) {
                 if (name == L"." || name == L"..")
                     continue;
 
-                if (find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-                    continue; // skip symlinks/junctions
-                }
+                if (find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+                    continue;
 
                 if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                    // New directory found, add it to queue and increment tasks
                     tasks.increment();
                     queue.push(dir_path + L"\\" + name);
                 } else {
@@ -121,29 +118,22 @@ void scan_directory(DirectoryQueue& queue, TaskCounter& tasks) {
             } while (FindNextFileW(hFind, &find_data));
 
             FindClose(hFind);
-
-            // Finished processing current directory
             tasks.decrement();
         }
     }
-    catch (const std::exception& e) {
-        // Optional: log error here
-        tasks.decrement();
-    }
     catch (...) {
-        // Catch all
+        had_error = true;
         tasks.decrement();
     }
 }
 
 extern "C" __declspec(dllexport)
-long long get_directory_size(const wchar_t* path) {
+const wchar_t* get_directory_size(const wchar_t* path) {
     total_size = 0;
+    had_error = false;
 
     DirectoryQueue queue;
     queue.push(path);
-
-    // Initialize task counter with 1 (the initial directory)
     TaskCounter tasks(1);
 
     unsigned int num_threads = std::thread::hardware_concurrency();
@@ -154,10 +144,7 @@ long long get_directory_size(const wchar_t* path) {
         workers.emplace_back(scan_directory, std::ref(queue), std::ref(tasks));
     }
 
-    // Wait until all directories processed
     tasks.wait_for_zero();
-
-    // Signal the queue that no more directories will be added
     queue.set_finished();
 
     for (auto& t : workers) {
@@ -166,5 +153,12 @@ long long get_directory_size(const wchar_t* path) {
         }
     }
 
-    return total_size.load();
+    static std::wstring result;
+    if (had_error.load()) {
+        result = L"ERR";  // You can change this to "FAIL" or any short word
+    } else {
+        result = std::to_wstring(total_size.load());
+    }
+
+    return result.c_str();
 }

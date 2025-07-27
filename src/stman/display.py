@@ -12,9 +12,13 @@ def welcome_message():
     show_welcome_path = r"src\stman\show_welcome.txt"
 
     if os.path.exists(show_welcome_path):
-        with open(show_welcome_path, "r") as f:
-            if f.read().strip().lower() == "no":
-                return  # Don't show message
+        try:
+            with open(show_welcome_path, "r") as f:
+                if f.read().strip().lower() == "no":
+                    return  # Don't show message
+        except (IOError, OSError):
+            # If we can't read the file, show the welcome message anyway
+            pass
     
     os.system("cls")
 
@@ -32,18 +36,21 @@ def _print_header(ui_state):
     else:
         current_folder_name = ui_state.current_path[-1]
 
-    width = shutil.get_terminal_size().columns
+    try:
+        width = shutil.get_terminal_size().columns
+    except OSError:
+        width = 80  # Default width if terminal size can't be determined
+    
     info_message = f"Current Folder: {current_folder_name}        Layer: {layer_number}"
 
     print(info_message.center(width))
 
 # Converts bytes to human readable format
 def _convert_to_readable(size) -> str:
-    # Could not calculate
-    if size == 0:
+    # Could not calculate size
+    if size == "ERR":
         return "CNC"
 
-    counter = 0
     suffixes = ["Bytes", "KiB", "MiB", "GiB", "TiB", "PiB"]
 
     for suffix in suffixes:
@@ -56,6 +63,9 @@ def _convert_to_readable(size) -> str:
     
 # Turn a 2 column list into a 4 column one
 def _split_rows(rows) -> list:
+    if not rows:
+        return []
+        
     half = (len(rows) + 1) // 2
     left_rows = rows[:half]
     right_rows = rows[half:]
@@ -70,44 +80,68 @@ def _split_rows(rows) -> list:
 
     return combined_rows
 
-# Displays a table of each directory and its size, main ui function
-def display_table(ui_state):
-    start_spinner()
-
-    console = Console()
-    table = Table(show_header = False, box = ROUNDED)
-
-    table.add_column("Folder Name")
-    table.add_column("Size", style = "white", justify = "right")
-
-    # current_path empty -> show drives, else show subdirs
+# Builds list that gets displayed on ui
+def _build_display_list(ui_state):
+    # current_path empty -> return drives
     if not ui_state.current_path:
         display_list = get_drives()
     else:
         directory = os.path.join(*ui_state.current_path)
         display_list = subdirs_and_sizes(ui_state, directory)
 
-    display_list = sorted(display_list, key=lambda x: x[1])
-    display_list.reverse()
+    return display_list
 
-    # Update state to reflect current ui
-    if not ui_state.current_path:
-        ui_state.selections = [drive_name for drive_name, _ in display_list]
-    else:
-        ui_state.selections = [subdir_name for subdir_name, _ in display_list]
-
+def _format_display_list(display_list, table):
+    # Create a new list to avoid mutating the input
+    formatted_list = []
+    
     for index, item in enumerate(display_list):
-        item[1] = _convert_to_readable(item[1])
-
-        # Numbers + coloring for accessibility
-        item[0] = f"[dim]{index + 1})[/dim] [cyan]{item[0]}"
+        formatted_item = [
+            f"[dim]{index + 1})[/dim] [cyan]{item[0]}",
+            _convert_to_readable(item[1])
+        ]
+        formatted_list.append(formatted_item)
 
     # Split columns if list is long
-    if len(display_list) > 20:
-        display_list = _split_rows(display_list)
+    if len(formatted_list) > 20:
+        formatted_list = _split_rows(formatted_list)
 
         table.add_column("Folder Name")
         table.add_column("Size", style = "white", justify = "right")
+
+    return formatted_list
+
+def _update_selections(ui_state, display_list):
+    ui_state.selections = [subdir_name for subdir_name, _ in display_list]
+
+# Displays the main ui interface
+def display_table(ui_state):
+    start_spinner()
+
+    console = Console()
+    table = Table(show_header = False, box = ROUNDED)
+    table.add_column("Folder Name")
+    table.add_column("Size", style = "white", justify = "right")
+
+    # Check cache
+    path_key = "\\".join(ui_state.current_path) if ui_state.current_path else "root"
+    cache_value = ui_state.cache_get(path_key)
+    if cache_value:
+        display_list = cache_value
+    else:
+        display_list = _build_display_list(ui_state)
+        ui_state.cache_set(path_key, display_list)
+
+    # Sort, update selections, format
+    def sort_key(item):
+        size = item[1]
+        if isinstance(size, str):
+            return -1  # Put string values (like "ERR") at the end
+        return size
+    
+    display_list = sorted(display_list, key=sort_key, reverse=True)
+    _update_selections(ui_state, display_list)
+    display_list = _format_display_list(display_list, table)
 
     for row in display_list:
         table.add_row(*row)

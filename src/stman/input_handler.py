@@ -12,15 +12,35 @@ def _handle_command_input(ui_state, user_input):
         print("Invalid command.")
 
 def _handle_selection_input(ui_state, user_input):
+    def _can_go_there(path):
+        try:
+            # Check for access
+            if not os.access(path, os.R_OK | os.X_OK):
+                print("Can't access that folder. Permission denied.")
+                return False
+
+            # Check if it's actually a directory
+            if not os.path.isdir(path):
+                print("That's not a folder.")
+                return False
+
+            # Check if directory is empty
+            if len(os.listdir(path)) == 0:
+                print("Can't access that folder. It's empty.")
+                return False
+        except Exception as e:
+            print(f"Error accessing folder: {e}")
+            return False
+        
+        return True
+
     index = int(user_input) - 1
 
     if 0 <= index < len(ui_state.selections):
         selected_folder = ui_state.selections[index]
         new_path = os.path.join(*ui_state.current_path, selected_folder)
 
-        # Check for access
-        if not os.access(new_path, os.R_OK | os.X_OK):
-            print("Can't access that folder. Permission denied.")
+        if not _can_go_there(new_path):
             return
 
         # Try to go there
@@ -42,10 +62,12 @@ def handle_input(ui_state, user_input):
         print("No input provided.")
         return
     
-    if user_input.isalpha():
+    # Check if it's a command first
+    if user_input in commands.command_list:
         _handle_command_input(ui_state, user_input)
         return
 
+    # Check if it's a number (selection)
     if user_input.isdigit():
         _handle_selection_input(ui_state, user_input)
         return

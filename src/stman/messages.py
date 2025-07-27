@@ -5,6 +5,7 @@ togglecnc             Hide/show files whose size can't be found
 b                     Go back to previous folder
 togglewelcome         Hide/show startup welcome message
 top                   Return to the top-level directory
+clearcache            Clear display cache
 goto                  Display the ui for a specific path
 [number]              Open folder at that number'''
 
