@@ -1,14 +1,22 @@
-from dir_utils import subdirs_and_sizes, get_drives
 from rich.table import Table
 from rich.console import Console
 from rich.box import ROUNDED
 from rich.align import Align
 import messages
+from state import AppState
+from dir_utils import map_children_to_sizes, map_drives_to_sizes
 from ui_spinner import start_spinner, stop_spinner
 import shutil
 import os
 
 def welcome_message():
+    '''
+    Displays the welcome message to the user.
+
+    Returns:
+        None
+    '''
+
     show_welcome_path = r"src\stman\show_welcome.txt"
 
     if os.path.exists(show_welcome_path):
@@ -27,8 +35,37 @@ def welcome_message():
     print()
     input("Hit any key to continue. ")
 
-# Prints layer and folder name above a table
+def _truncate_name(directory_name: str) -> str:
+    '''
+    Truncates a directory name to 26 characters.
+
+    Args:
+        directory_name: The name of the directory to truncate.
+
+    Returns:
+        A string representing the truncated directory name.
+    '''
+
+    cutoff = 26
+    directory_name = directory_name[:cutoff] + "..."
+    
+    # If there is a space before "...", remove it -> looks cleaner
+    if directory_name[-4] == " ":
+        directory_name = directory_name[: -4] + "..."
+
+    return directory_name
+
 def _print_header(ui_state):
+    '''
+    Prints the layer and folder name above a table.
+
+    Args:
+        ui_state: An object containing the current UI state, including the current path.
+
+    Returns:
+        None
+    '''
+
     layer_number = len(ui_state.current_path)
     
     if not ui_state.current_path:
@@ -45,11 +82,28 @@ def _print_header(ui_state):
 
     print(info_message.center(width))
 
-# Converts bytes to human readable format
+
 def _convert_to_readable(size) -> str:
-    # Could not calculate size
-    if size == "ERR":
-        return "CNC"
+    '''
+    Converts bytes to human readable format.
+
+    Args:
+        size: The size in bytes or a string error indicator.
+
+    Returns:
+        A string representing the size in a human readable format.
+    '''
+
+    if size == "access_denied":
+        return "X"
+    
+    # See dir_size.cpp "get_directory_size" func docstring for context
+    if "*" in size:
+        partial_calculation = True
+        size = int(size.replace("*", ""))
+    else:
+        partial_calculation = False
+        size = int(size)
 
     suffixes = ["Bytes", "KiB", "MiB", "GiB", "TiB", "PiB"]
 
@@ -59,10 +113,22 @@ def _convert_to_readable(size) -> str:
         
         size = size / 1024
     
-    return f"{size:.3g} {suffix}"
+    if partial_calculation:
+        return f"[green]{size:.3g} {suffix}"
+    else:
+        return f"{size:.3g} {suffix}"
     
-# Turn a 2 column list into a 4 column one
 def _split_rows(rows) -> list:
+    '''
+    Splits a list of rows into two columns.
+
+    Args:
+        rows: A list of rows to split.
+
+    Returns:
+        A list of rows split into two columns.
+    '''
+
     if not rows:
         return []
         
@@ -80,70 +146,97 @@ def _split_rows(rows) -> list:
 
     return combined_rows
 
-# Builds list that gets displayed on ui
-def _build_display_list(ui_state):
-    # current_path empty -> return drives
+def _build_raw_mapping(ui_state: AppState) -> dict:
+    """
+    Builds and returns the list of directory entries to display in the UI.
+
+    If the current path is empty, returns the list of system drives.
+    Otherwise, returns the list of subdirectories and their sizes for the current directory.
+
+    Args:
+        ui_state: An object containing the current UI state, including the current path.
+
+    Returns:
+        A list representing drives or subdirectories with their sizes, suitable for display.
+    """
+
     if not ui_state.current_path:
-        display_list = get_drives()
+        dictionary = map_drives_to_sizes()
     else:
         directory = os.path.join(*ui_state.current_path)
-        display_list = subdirs_and_sizes(ui_state, directory)
+        dictionary = map_children_to_sizes(directory)
 
-    return display_list
+    return dictionary
 
-def _format_display_list(display_list, table):
-    # Create a new list to avoid mutating the input
-    formatted_list = []
-    
-    for index, item in enumerate(display_list):
-        formatted_item = [
-            f"[dim]{index + 1})[/dim] [cyan]{item[0]}",
-            _convert_to_readable(item[1])
-        ]
-        formatted_list.append(formatted_item)
+def _get_cache_or_build_mapping(ui_state: AppState) -> dict:
+    '''
+    Gets the cached mapping for the current path, or builds and caches it if it doesn't exist.
 
-    # Split columns if list is long
-    if len(formatted_list) > 20:
-        formatted_list = _split_rows(formatted_list)
+    Args:
+        ui_state: An object containing the current UI state, including the current path.
 
-        table.add_column("Folder Name")
-        table.add_column("Size", style = "white", justify = "right")
+    Returns:
+        A dictionary representing the mapping of directory names to sizes.
+    '''
 
-    return formatted_list
+    path_key = "\\".join(ui_state.current_path) if ui_state.current_path else "root"
 
-def _update_selections(ui_state, display_list):
-    ui_state.selections = [subdir_name for subdir_name, _ in display_list]
+    if ui_state.cache_has(path_key):
+        return ui_state.cache_get(path_key)
+    else:
+        raw_mapping = _build_raw_mapping(ui_state)
+        ui_state.cache_set(path_key, raw_mapping)
+        return raw_mapping
 
-# Displays the main ui interface
-def display_table(ui_state):
+def display_ui(ui_state: AppState) -> None:
+    '''
+    Displays the UI for the user.
+
+    Args:
+        ui_state: An object containing the current UI state, including the current path.
+
+    Returns:
+        None
+    '''
+
     start_spinner()
 
-    console = Console()
-    table = Table(show_header = False, box = ROUNDED)
-    table.add_column("Folder Name")
-    table.add_column("Size", style = "white", justify = "right")
-
-    # Check cache
-    path_key = "\\".join(ui_state.current_path) if ui_state.current_path else "root"
-    cache_value = ui_state.cache_get(path_key)
-    if cache_value:
-        display_list = cache_value
-    else:
-        display_list = _build_display_list(ui_state)
-        ui_state.cache_set(path_key, display_list)
-
-    # Sort, update selections, format
+    raw_mapping = _get_cache_or_build_mapping(ui_state)
+    
     def sort_key(item):
         size = item[1]
-        if isinstance(size, str):
-            return -1  # Put string values (like "ERR") at the end
-        return size
-    
-    display_list = sorted(display_list, key=sort_key, reverse=True)
-    _update_selections(ui_state, display_list)
-    display_list = _format_display_list(display_list, table)
+        # See dir_size.cpp "get_directory_size" func docstring for context     
+        return -1 if size == "access_denied" else int(size.replace("*", ""))
 
-    for row in display_list:
+    sorted_items = sorted(raw_mapping.items(), key=sort_key, reverse=True)
+    
+    # Update user selections
+    ui_state.selections = [name for name, _ in sorted_items]
+
+    # Format items for display
+    formatted_rows = []
+    for index, (name, size) in enumerate(sorted_items):
+        display_name = _truncate_name(name) if len(name) > 26 else name
+        
+        formatted_row = [
+            f"[dim]{index + 1})[/dim] [cyan]{display_name}",
+            _convert_to_readable(size)
+        ]
+        formatted_rows.append(formatted_row)
+
+    console = Console()
+    table = Table(show_header=False, box=ROUNDED)
+    table.add_column("Folder Name")
+    table.add_column("Size", style="white", justify="right")
+
+    # Split into multiple columns if there are many items
+    if len(formatted_rows) > 20:
+        formatted_rows = _split_rows(formatted_rows)
+
+        table.add_column("Folder Name")
+        table.add_column("Size", style="white", justify="right")
+
+    for row in formatted_rows:
         table.add_row(*row)
 
     stop_spinner()

@@ -48,7 +48,7 @@ public:
 };
 
 std::atomic<long long> total_size(0);
-std::atomic<bool> had_error(false);  // Track access errors
+std::atomic<bool> had_error(false);  // For partial errors
 
 class TaskCounter {
     std::atomic<int> count;
@@ -127,10 +127,39 @@ void scan_directory(DirectoryQueue& queue, TaskCounter& tasks) {
     }
 }
 
+/**
+ * Calculates the total size of files in the specified directory and its subdirectories.
+ *
+ * @param path  The root directory path to scan (wide string).
+ * @return      A wide string representing:
+ *              - Total size in bytes (ex "7632764") if fully successful.
+ *              - Total size with an asterisk suffix (ex "7632764*") if some subfolders were inaccessible.
+ *              - "access_denied" if the root directory itself cannot be accessed.
+ */
 extern "C" __declspec(dllexport)
 const wchar_t* get_directory_size(const wchar_t* path) {
     total_size = 0;
     had_error = false;
+
+    {
+        WIN32_FIND_DATAW find_data;
+        std::wstring search_path = std::wstring(path) + L"\\*";
+        HANDLE hFind = FindFirstFileExW(
+            search_path.c_str(),
+            FindExInfoBasic,
+            &find_data,
+            FindExSearchNameMatch,
+            NULL,
+            FIND_FIRST_EX_LARGE_FETCH
+        );
+
+        if (hFind == INVALID_HANDLE_VALUE) {
+            // Cannot access root folder at all
+            static const std::wstring access_denied = L"access_denied";
+            return access_denied.c_str();
+        }
+        FindClose(hFind);
+    }
 
     DirectoryQueue queue;
     queue.push(path);
@@ -155,7 +184,8 @@ const wchar_t* get_directory_size(const wchar_t* path) {
 
     static std::wstring result;
     if (had_error.load()) {
-        result = L"ERR";  // You can change this to "FAIL" or any short word
+        // Partial success, append '*'
+        result = std::to_wstring(total_size.load()) + L"*";
     } else {
         result = std::to_wstring(total_size.load());
     }

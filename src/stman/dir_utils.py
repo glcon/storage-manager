@@ -1,36 +1,75 @@
 import string
 import os
-import ctypes
 import psutil
-import copy
 from ctypes import wintypes, WinDLL, c_wchar_p
 
 # Load the DLL
-dir_size_dll = WinDLL(r"dir_size\dir_size.dll")
+dll_path = os.path.join(os.path.dirname(__file__), "dir_size.dll")
+dir_size_dll = WinDLL(dll_path)
+
 dir_size_dll.get_directory_size.argtypes = [wintypes.LPCWSTR]
 dir_size_dll.get_directory_size.restype = c_wchar_p
 
-# Gets the size of a directory
-# Returning none prevents it from being displayed
-def _get_dir_size(ui_state, dir_path):
-    output = dir_size_dll.get_directory_size(dir_path)
+# Determines if file's size should be calculated
+def _should_calculate(item_path: str) -> bool:
+    '''
+    Determines if the size of a file or directory should be calculated.
 
-    if ui_state.show_cnc == False and output == "ERR":
-        return None
+    Args:
+        item_path: The path to the file or directory.
 
-    # Convert successful calculations back to integers
-    if output != "ERR":
-        try:
-            return int(output)
-        except (ValueError, TypeError):
-            return "ERR"  # If conversion fails, treat as error
+    Returns:
+        True if the size should be calculated, False otherwise.
+    '''
 
-    return output
+    if not os.path.exists(item_path):
+        return False
 
+    def is_immediate_subdir_of_drive(path: str) -> bool:
+        '''
+        Checks if the given Windows path is an immediate subdirectory of a drive root.
+
+        Args:
+            path: The path to check.
+
+        Returns:
+            True if the path is an immediate subdirectory of a drive root, False otherwise.
+        '''
+
+        path = os.path.abspath(path)
+        drive, tail = os.path.splitdrive(path)
+        if not drive:
+            return False  # Not a valid drive path
+
+        # Normalize and split
+        parts = os.path.normpath(path).split(os.sep)
+        
+        return len(parts) == 2 and parts[0].endswith(':')
+    
+    if is_immediate_subdir_of_drive(item_path) and os.path.isfile(item_path):
+        return False
+
+    if os.path.islink(item_path):
+        return False
+    
+    # Inaccessible
+    try:
+        os.stat(item_path)
+    except (PermissionError, FileNotFoundError, OSError):
+        return False
+    
+    return True
 
 # Returns a list of all drives and their sizes
-def get_drives() -> list:
-    drives = []
+def map_drives_to_sizes() -> dict:
+    '''
+    Returns a dictionary mapping drives to their sizes.
+
+    Returns:
+        A dictionary mapping drives to their sizes.
+    '''
+
+    drive_size_map = {}
 
     for letter in string.ascii_uppercase:
         drive = f"{letter}:\\"
@@ -40,66 +79,35 @@ def get_drives() -> list:
                 # Get disk usage info
                 usage = psutil.disk_usage(drive)
                 size = usage.used
-                drives.append([drive, size])
+                drive_size_map[drive] = str(size)
             except (OSError, PermissionError):
                 # Skip drives we can't access
                 continue
 
-    return drives
+    return drive_size_map
 
-# Determines if file's size should be calculated
-def _should_calculate(ui_state, full_path) -> bool:
-    # Ignore non-folders when inside any drive
-    if len(ui_state.current_path) == 1:
-        if not os.path.isdir(full_path):
-            return False
+def map_children_to_sizes(dir_path: str) -> dict:   
+    '''
+    Returns a dictionary mapping subdir/file names to their sizes
+    within the given directory.
+
+    Args:
+        dir_path: Path to the parent directory.
+
+    Returns:
+        A dict where keys are names of immediate children and values are their sizes.
+    '''
     
-    if os.path.islink(full_path):
-        return False
-    
-    # Inaccessible
-    try:
-        os.stat(full_path)
-    except (PermissionError, FileNotFoundError, OSError):
-        return False
-    
-    return True
+    folder_size_map = {}
 
-# Build a list of all subdirs and their sizes, takes in a dir
-def subdirs_and_sizes(ui_state, main_dir) -> list:  
-    subdir_names = []
-    subdir_sizes = []
+    for child_item in os.listdir(dir_path):
+        child_item_path = os.path.join(dir_path, child_item)
 
-    for directory in os.listdir(main_dir):
-        full_path = os.path.join(main_dir, directory)
-
-        if not _should_calculate(ui_state, full_path):
+        if not _should_calculate(child_item_path):
             continue
 
-        current_directory_size = _get_dir_size(ui_state, full_path)
+        child_item_size = dir_size_dll.get_directory_size(child_item_path)
 
-        # Dont add
-        if current_directory_size == None:
-            continue
-        
-        # If folder name is too long, truncate it
-        if len(directory) >= 29:
-            cutoff = 26
+        folder_size_map[child_item] = child_item_size
 
-            # Dont land on a space
-            if cutoff > 1 and directory[cutoff - 1] == " ":
-                cutoff -= 2
-            
-            # Ensure cutoff doesn't go below 0
-            cutoff = max(0, cutoff)
-            directory = directory[:cutoff] + "..."
-
-        subdir_names.append(directory)
-        subdir_sizes.append(current_directory_size)
-
-    names_and_sizes = []
-    for name, size in zip(subdir_names, subdir_sizes):
-        names_and_sizes.append([name, size])
-
-    # Will be a list of lists
-    return names_and_sizes
+    return folder_size_map

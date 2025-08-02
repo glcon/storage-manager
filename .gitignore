@@ -1,5 +1,5 @@
 .vscode/
-*.exe
 __pycache__/
-venv/
+.venv/
 todo
+pyproject.toml

@@ -1,4 +1,4 @@
-from display import display_table, welcome_message
+from display import display_ui, welcome_message
 from input_handler import handle_input
 from state import AppState
 
@@ -6,7 +6,7 @@ def main():
     welcome_message()
 
     ui_state = AppState()
-    display_table(ui_state)
+    display_ui(ui_state)
 
     while not ui_state.should_exit:
         user_input = input(">>> ").strip().lower()

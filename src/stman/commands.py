@@ -1,4 +1,4 @@
-from display import display_table
+from display import display_ui
 import os
 import messages
 from pathlib import Path
@@ -23,7 +23,7 @@ def goto(ui_state):
         desired_path = list(Path(user_input).parts)
 
         ui_state.current_path = desired_path
-        display_table(ui_state)
+        display_ui(ui_state)
     except Exception:
         print("Not a valid path.")
         return
@@ -33,20 +33,20 @@ def top(ui_state):
         print("Already at root.")
     else:
         ui_state.current_path = []
-        display_table(ui_state)
+        display_ui(ui_state)
 
 def go_back(ui_state):
     if not ui_state.current_path:
         print("Already at root.")
     else:
         ui_state.current_path.pop()
-        display_table(ui_state)
+        display_ui(ui_state)
 
 def refresh(ui_state):
     path_key = "\\".join(ui_state.current_path) if ui_state.current_path else "root"
     ui_state.cache_library.pop(path_key, None)
     
-    display_table(ui_state)
+    display_ui(ui_state)
 
 def help(ui_state):
     os.system("cls")
@@ -55,7 +55,7 @@ def help(ui_state):
 
     print("\n")
     input("Hit any key to return. ")
-    display_table(ui_state)
+    display_ui(ui_state)
 
 def toggle_cnc(ui_state):
     ui_state.show_cnc = not ui_state.show_cnc

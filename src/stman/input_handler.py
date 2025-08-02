@@ -1,18 +1,45 @@
 import commands
 import time
+from state import AppState
 from ui_spinner import stop_spinner
-from display import display_table
+from display import display_ui
 import os
 
-def _handle_command_input(ui_state, user_input):
+def _handle_command_input(ui_state: AppState, user_input: str) -> None:
+    '''
+    Handles command input.
+
+    Args:
+        ui_state: The current UI state.
+        user_input: The user's input.
+    '''
+
     if user_input in commands.command_list:
         # Function call
         commands.command_list[user_input](ui_state)
     else:
         print("Invalid command.")
 
-def _handle_selection_input(ui_state, user_input):
-    def _can_go_there(path):
+def _handle_selection_input(ui_state: AppState, user_input: str) -> None:
+    '''
+    Handles selection input.
+
+    Args:
+        ui_state: The current UI state.
+        user_input: The user's input.
+    '''
+
+    def _can_go_there(path: str) -> bool:
+        '''
+        Checks if the user can go to the given path.
+
+        Args:
+            path: The path to check.
+
+        Returns:
+            True if the user can go to the given path, False otherwise.
+        '''
+
         try:
             # Check for access
             if not os.access(path, os.R_OK | os.X_OK):
@@ -46,18 +73,26 @@ def _handle_selection_input(ui_state, user_input):
         # Try to go there
         try:
             ui_state.current_path.append(selected_folder)
-            display_table(ui_state)
+            display_ui(ui_state)
         except Exception as e:
             stop_spinner()
             print(f"Error accessing folder: {e}")
             print("Returning to previous folder.")
             time.sleep(5)
             ui_state.current_path.pop()
-            display_table(ui_state)
+            display_ui(ui_state)
     else:
         print("Invalid selection.")
 
-def handle_input(ui_state, user_input):
+def handle_input(ui_state: AppState, user_input: str) -> None:
+    '''
+    Handles user input.
+
+    Args:
+        ui_state: The current UI state.
+        user_input: The user's input.
+    '''
+
     if not user_input:
         print("No input provided.")
         return

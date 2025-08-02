@@ -9,18 +9,14 @@ clearcache            Clear display cache
 goto                  Display the ui for a specific path
 [number]              Open folder at that number'''
 
-welcome_text = '''Thank you for downloading my storage manager tool.
+welcome_text = '''Thank you for downloading Garrett's storage manager tool.
 Type  "help" in the console at any time for guidance.
 
 Notes:
-I highly recommend you run this terminal program as an admin; it
-will help prevent permission errors.
-
-If a folder's size is listed as "CNC," it means that it couldn't be
-calculated. You can hide these with the "togglecnc" command.
-
-Most core system folders are inaccessible even with admin permissions.
-In addition to this, they tend to contain ridiculous amounts of subfolders and 
-lead to large calculation times, so I advise against using the program on them.
+- Running this program as an admin is recommended for folder permission reasons.
+- A folder size of "X" means that it's inaccessible.
+- A folder size in green means that its size could only be partially calculated.
+- Avoid using this tool on system folders or files, they tend to be both inaccessible
+and very large, leading to long calculation times.
 
 Use "togglewelcome" to hide this message.'''
