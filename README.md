@@ -5,7 +5,7 @@ A lightweight CLI tool that tabulates device/folder storage on Windows systems.
 ## Features
 
 - **Drive Analysis**: View storage usage across all available drives
-- **Directory Scanning**: Calculate folder sizes with real-time updates
+- **Directory Scanning**: Calculate folder sizes with real time updates
 - **Interactive UI**: Navigate through directories with keyboard commands
 - **Performance Optimized**: Uses native Windows APIs for fast scanning
 - **Cross-Drive Support**: Works across all accessible Windows drives
@@ -35,7 +35,7 @@ stman
 - `top` - Go to root directory
 - `b` - Go back one directory
 - `r` - Refresh current view
-- `togglecnc` - Toggle showing uncalculatable folders
+- `togglex` - Toggle showing inaccessible folders
 - `togglewelcome` - Toggle welcome message
 - `clearcache` - Clear the size cache
 
