@@ -1,16 +1,39 @@
 import string
 import os
 import psutil
+import sys
+import platform
 from ctypes import wintypes, WinDLL, c_wchar_p
 
-# Load the DLL
-dll_path = os.path.join(os.path.dirname(__file__), "dir_size.dll")
-dir_size_dll = WinDLL(dll_path)
+def _load_dll():
+    '''
+    Load the dir_size.dll with proper path for PyPI distribution.
+    '''
+    
+    dll_path = os.path.join(os.path.dirname(__file__), "dir_size.dll")
+    
+    if os.path.exists(dll_path):
+        try:
+            dll = WinDLL(dll_path)
+            dll.get_directory_size.argtypes = [wintypes.LPCWSTR]
+            dll.get_directory_size.restype = c_wchar_p
+            return dll
+        except Exception as e:
+            raise RuntimeError(f"Failed to load DLL from {dll_path}: {e}")
+    
+    # If dll not found, provide error message
+    raise FileNotFoundError(
+        f"dir_size.dll not found at {dll_path}. "
+        "Make sure the DLL is included in the package distribution."
+    )
 
-dir_size_dll.get_directory_size.argtypes = [wintypes.LPCWSTR]
-dir_size_dll.get_directory_size.restype = c_wchar_p
+try:
+    dir_size_dll = _load_dll()
+except FileNotFoundError as e:
+    print(f"Error: {e}")
+    print("This package requires dir_size.dll to function properly.")
+    sys.exit(1)
 
-# Determines if file's size should be calculated
 def _should_calculate(item_path: str) -> bool:
     '''
     Determines if the size of a file or directory should be calculated.
@@ -60,7 +83,6 @@ def _should_calculate(item_path: str) -> bool:
     
     return True
 
-# Returns a list of all drives and their sizes
 def map_drives_to_sizes() -> dict:
     '''
     Returns a dictionary mapping drives to their sizes.

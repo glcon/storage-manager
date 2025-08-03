@@ -9,7 +9,7 @@ class AppState:
         self.current_path = []
         self.selections = []
         self.should_exit = False
-        self.show_cnc = True
+        self.show_x = True
 
         # Cache
         self.cache_library = {}

@@ -1,8 +1,12 @@
-from display import display_ui, welcome_message
-from input_handler import handle_input
-from state import AppState
+from .display import display_ui, welcome_message
+from .input_handler import handle_input
+from .state import AppState
+import platform
 
 def main():
+    if platform.system() != "Windows":
+        raise RuntimeError("This package is only supported on Windows systems.")
+
     welcome_message()
 
     ui_state = AppState()

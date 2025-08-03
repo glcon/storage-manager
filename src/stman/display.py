@@ -2,10 +2,10 @@ from rich.table import Table
 from rich.console import Console
 from rich.box import ROUNDED
 from rich.align import Align
-import messages
-from state import AppState
-from dir_utils import map_children_to_sizes, map_drives_to_sizes
-from ui_spinner import start_spinner, stop_spinner
+from . import messages
+from .state import AppState
+from .dir_utils import map_children_to_sizes, map_drives_to_sizes
+from .ui_spinner import start_spinner, stop_spinner
 import shutil
 import os
 
@@ -17,12 +17,15 @@ def welcome_message():
         None
     '''
 
-    show_welcome_path = r"src\stman\show_welcome.txt"
+    # Get the directory where this module is located
+    module_dir = os.path.dirname(os.path.abspath(__file__))
+    show_welcome_path = os.path.join(module_dir, "show_welcome.txt")
 
     if os.path.exists(show_welcome_path):
         try:
             with open(show_welcome_path, "r") as f:
-                if f.read().strip().lower() == "no":
+                content = f.read().strip().lower()
+                if content == "no":
                     return  # Don't show message
         except (IOError, OSError):
             # If we can't read the file, show the welcome message anyway
@@ -33,7 +36,7 @@ def welcome_message():
     print(messages.welcome_text)
 
     print()
-    input("Hit any key to continue. ")
+    input("Hit enter to continue. ")
 
 def _truncate_name(directory_name: str) -> str:
     '''
@@ -209,6 +212,10 @@ def display_ui(ui_state: AppState) -> None:
         return -1 if size == "access_denied" else int(size.replace("*", ""))
 
     sorted_items = sorted(raw_mapping.items(), key=sort_key, reverse=True)
+    
+    # Filter out "X" entries if show_x is False
+    if not ui_state.show_x:
+        sorted_items = [(name, size) for name, size in sorted_items if size != "access_denied"]
     
     # Update user selections
     ui_state.selections = [name for name, _ in sorted_items]

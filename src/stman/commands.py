@@ -1,6 +1,6 @@
-from display import display_ui
+from .display import display_ui
 import os
-import messages
+from . import messages
 from pathlib import Path
 
 def exit(ui_state):
@@ -54,16 +54,16 @@ def help(ui_state):
     print(messages.help_text)
 
     print("\n")
-    input("Hit any key to return. ")
+    input("Hit enter to return. ")
     display_ui(ui_state)
 
-def toggle_cnc(ui_state):
-    ui_state.show_cnc = not ui_state.show_cnc
+def toggle_x(ui_state):
+    ui_state.show_x = not ui_state.show_x
 
-    if ui_state.show_cnc == False:
-        print("Hiding uncalculatable folders.")
+    if ui_state.show_x == False:
+        print("Hiding folders that can't be calculated.")
     else:
-        print("Showing uncalculatable folders.")
+        print("Showing folders that can't be calculated.")
 
 def toggle_welcome(_):
     show_welcome_path = os.path.join(os.path.dirname(__file__), "show_welcome.txt")
@@ -104,7 +104,7 @@ command_list = {
 "r": refresh,
 "help": help,
 "b": go_back,
-"togglecnc": toggle_cnc,
+"togglex": toggle_x,
 "togglewelcome": toggle_welcome,
 "top": top,
 "goto": goto,
