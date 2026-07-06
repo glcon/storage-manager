@@ -1,77 +1,70 @@
-# Storage Manager (stman)
+# stman
 
-A lightweight CLI tool that tabulates device/folder storage on Windows systems.
+Windows' built-in storage tools don't tell you much. Storage Sense shows you a pie chart, Explorer makes you right-click every folder individually. I wanted something that would actually show me where my disk space was going, all at once, fast.
 
-## Features
+stman is a CLI tool that scans your drives and directories and displays sizes in a sorted table. Navigate into any folder to see what's inside it.
 
-- **Drive Analysis**: View storage usage across all available drives
-- **Directory Scanning**: Calculate folder sizes with real time updates
-- **Interactive UI**: Navigate through directories with keyboard commands
-- **Performance Optimized**: Uses native Windows APIs for fast scanning
-- **Cross-Drive Support**: Works across all accessible Windows drives
-
-## Requirements
-
-- Windows 10/11
-- Python 3.8 or higher
+<!-- Add a screenshot or GIF here -->
 
 ## Installation
 
-```powershell
+```
 pip install stman
 ```
 
+Requires Python 3.8+ on Windows 10/11.
+
 ## Usage
 
-```powershell
+```
 stman
 ```
 
 ### Commands
 
-- `help` - Show available commands
-- `exit` - Exit the application
-- `goto` - Navigate to a specific path
-- `top` - Go to root directory
-- `b` - Go back one directory
-- `r` - Refresh current view
-- `togglex` - Toggle showing inaccessible folders
-- `togglewelcome` - Toggle welcome message
-- `clearcache` - Clear the size cache
+| Command | Description |
+|---|---|
+| `goto <path>` | Jump to a specific path |
+| `b` | Go back one directory |
+| `top` | Go to drive root |
+| `r` | Refresh current view |
+| `togglex` | Show/hide inaccessible folders |
+| `clearcache` | Clear cached sizes |
+| `help` | List all commands |
+| `exit` | Quit |
 
-## Contributing
+### Benchmark Mode
 
-### Reporting Issues
-
-If you encounter any issues or have suggestions for improvements:
-
-1. **Check the error message**: The application provides specific error messages for common issues
-2. **Platform compatibility**: This tool only works on Windows systems
-3. **DLL errors**: If you see "dir_size.dll not found" errors, try reinstalling the package
-4. **Permission errors**: Some folders may be inaccessible due to Windows permissions
-
-### Contributing Code
-
-Contributions are welcome. To contribute:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly on Windows
-5. Submit a pull request
-
-### Development Setup
-
-```powershell
-git clone https://github.com/glcon/storage-manager.git
-cd storage-manager
-pip install -e .
 ```
+stman --benchmark <path>
+```
+
+Runs stman's scanner against PowerShell's `Get-ChildItem` on the same directory (with disk cache pre-warmed for both) and reports the comparison.
+
+## Benchmarks
+
+```
+Benchmarking: C:\Program Files
+──────────────────────────────────────────────────
+  stman (C++ DLL):     0.63s
+  PowerShell GCI:      14.28s
+  Speedup:             22.5x
+──────────────────────────────────────────────────
+
+Benchmarking: C:\Users\glcon
+──────────────────────────────────────────────────
+  stman (C++ DLL):     2.06s
+  PowerShell GCI:      13.54s
+  Speedup:             6.6x
+──────────────────────────────────────────────────
+```
+
+Speedup varies with directory width — wider trees give the thread pool more parallel work to distribute. `C:\Program Files` has many independent top-level subdirectories; `C:\Users` is deeper and narrower.
+
+## How it works
+
+The scanner is a C++ DLL called via Python's `ctypes` FFI. It uses Win32's `FindFirstFileExW` with `FIND_FIRST_EX_LARGE_FETCH` for fast directory enumeration, and distributes subdirectories across a thread pool sized to `hardware_concurrency()`. The Python layer handles the CLI, caching, and display.
 
 ## License
 
-MIT License - see LICENSE file for details.
-
-## Author
-
-Garrett Connell 
+MIT

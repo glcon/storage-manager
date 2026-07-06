@@ -1,11 +1,17 @@
 from .display import display_ui, welcome_message
 from .input_handler import handle_input
 from .state import AppState
+from .benchmark import run_benchmark
 import platform
+import sys
 
 def main():
     if platform.system() != "Windows":
         raise RuntimeError("This package is only supported on Windows systems.")
+
+    if len(sys.argv) == 3 and sys.argv[1] == "--benchmark":
+        run_benchmark(sys.argv[2])
+        return
 
     welcome_message()
 
