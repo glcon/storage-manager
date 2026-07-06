@@ -1,6 +1,6 @@
 # stman
 
-Windows' built-in storage tools don't tell you much. Explorer makes you right-click every folder individually. I wanted something that would actually show me where my disk space was going.
+Windows' built-in storage tools don't tell you much -- explorer makes you right-click every folder individually, which gets annoying quickly. I wanted a tool that would actually show me where my disk space was going while remaining lightweight and simple, so I made this.
 
 stman is a CLI tool that scans your drives and directories and displays sizes in a sorted table. Navigate into any folder to see what's inside it.
 
